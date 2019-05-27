@@ -1,0 +1,27 @@
+{
+    "name": "vladimirtunikov/php-odata",
+    "description": "PHP 1C OData",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Vladimir Tunikov",
+            "email": "tune@artskills.ru"
+        }
+    ],
+    "require": {
+        "php": "^7.1"
+    },
+    "require-dev": {
+		"phpunit/phpunit": "^7"
+    },
+    "autoload": {
+		"psr-4": {
+			"OData\\": "src"
+		}
+    },
+    "autoload-dev": {
+		"psr-4": {
+			"OData\\Test\\": "tests"
+		}
+	}
+}
