@@ -1,4 +1,4 @@
-# Библиотека для чтения данных из 1С по протоколу OData
+# Библиотека для доступу из PHP к 1С по протоколу OData
 За основу взята и доработана saintsystems/odata-client-php: https://github.com/saintsystems/odata-client-php
 
 Базовая документация по ней: https://github.com/saintsystems/odata-client-php/wiki/Example-calls
