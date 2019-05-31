@@ -56,15 +56,15 @@ $storeRemains = $oDataClient->from("AccountingRegister_Хозрасчетный/
         'Валюта/Code',
         'Валюта/Description',
         'Организация/Description',
-        'Организация/ИНН'
-        ,'ExtDimension1',
+        'Организация/ИНН',
+        'ExtDimension1',
         'ExtDimension3',
         'СуммаBalance',
         'КоличествоBalance'
     ])->expand(['Account', 'Валюта', 'Организация', 'ExtDimension1', 'ExtDimension3'])
     ->take(5)
     ->get();
-print var_export($storeRemains);
+var_export($storeRemains);
 ```
 
 ### Комбинированный отбор
