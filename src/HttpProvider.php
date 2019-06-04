@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace OData;
 
+use GuzzleHttp\Exception\BadResponseException;
+use SaintSystems\OData\Exception\ODataException;
 use SaintSystems\OData\GuzzleHttpProvider;
 use SaintSystems\OData\HttpMethod;
 use SaintSystems\OData\HttpRequestMessage;
@@ -30,11 +32,36 @@ class HttpProvider extends GuzzleHttpProvider
             $url .= (strstr($url, '?') ? '&' : '?') . self::JSON_FORMAT_ARG;
         }
 
-        $result = $this->http->request(
-            $request->method,
-            $url,
-            $options
-        );
+        try {
+            $result = $this->http->request(
+                $request->method,
+                $url,
+                $options
+            );
+        } catch (BadResponseException $exception) {
+            $response = $exception->getResponse();
+            $contents = $response->getBody()->getContents();
+            switch ($response->getStatusCode()) {
+                case 400:
+                    $responseJson = json_decode($contents, true);
+                    if ($responseJson) {
+                        throw new ODataException($responseJson['odata.error']['message']['value'], $responseJson['odata.error']['code']);
+                    } else {
+                        throw new \Exception($contents);
+                    }
+
+                case 500:
+                    $responseJson = json_decode($contents, true);
+                    if ($responseJson) {
+                        throw new ODataException($responseJson['odata.error']['message']['value'], $responseJson['odata.error']['code']);
+                    } else {
+                        throw new \Exception($contents);
+                    }
+
+                default:
+                    throw new \Exception($contents);
+            }
+        }
 
         return $result;
     }

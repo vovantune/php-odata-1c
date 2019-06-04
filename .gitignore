@@ -2,3 +2,6 @@ composer.phar
 /vendor/
 /.idea/
 /tests/Test.php
+/src/Documents/
+/src/Entity1C.php
+/tests/Documents/
