@@ -3,6 +3,8 @@
 
 Базовая документация по ней: https://github.com/saintsystems/odata-client-php/wiki/Example-calls
 
+## Настройка 1С
+
 По-умолчанию в 1С отключена публикация всех данных дажи при активированном OData протоколе в публикации.
 Для решения данной проблемы ренобходимо от администратора запустить [РедактированиеСоставаСтандартногоИнтерфейсаOData.epf](РедактированиеСоставаСтандартногоИнтерфейсаOData.epf)
 
@@ -19,11 +21,23 @@ $oDataClient = new OData1CClient($odataServiceUrl, $username, $password);
 ### Получение массива данных
 ```php
 $measures = $oDataClient->from('Catalog_КлассификаторЕдиницИзмерения')
-            ->where('DeletionMark', '=', false)
+            ->where('DeletionMark', '=', false) // условие отбора может быть также \DateTime, строкой guid. Главное, что должно соответствовать типу данных в отбираемом поле
             ->get();
 foreach ($measures as $rec) {
     print ($rec->НаименованиеПолное) . "\n";
 }
+
+// получаем первую запись из списка
+$measures = $oDataClient->from('Catalog_КлассификаторЕдиницИзмерения')
+            ->where('DeletionMark', '=', false)
+            ->first();
+```
+
+Получение количества записей для данного запроса:
+```php
+$total = $oDataClient->from('Catalog_КлассификаторЕдиницИзмерения')
+            ->where('DeletionMark', '=', false)
+            ->count();
 ```
 
 Массив со связями на другой объект:
@@ -42,6 +56,34 @@ foreach ($barcodes as $bc) {
 }
 ```
 
+#### Пажинация
+```php
+$result = $oDataClient->from('Catalog_КлассификаторЕдиницИзмерения')
+            ->where('DeletionMark', '=', false)
+            ->skip(3)
+            ->take(2)
+            ->get();
+```
+
+### Сортировка
+Следует иметь ввиду, что последующий вызов order перезаписывает предыдущий, в отличие от where
+```php
+// сортировка по возрастанию
+$result = $oDataClient->from('Catalog_КлассификаторЕдиницИзмерения')
+            ->order('Description')
+            ->get();
+
+// сортировка по убыванию
+$result = $oDataClient->from('Catalog_КлассификаторЕдиницИзмерения')
+            ->order('Description', 'desc')
+            ->get();
+
+// сортировка по нескольким полям
+$result = $oDataClient->from('Catalog_КлассификаторЕдиницИзмерения')
+            ->order([['Description', 'desc'], ['Code', 'asc']])
+            ->get();
+```
+
 ### Получение записи по ID
 ```php
 $entity = $oDataClient->from('Catalog_КлассификаторЕдиницИзмерения')
@@ -49,10 +91,22 @@ $entity = $oDataClient->from('Catalog_КлассификаторЕдиницИз
 var_export($entity->НаименованиеПолное);
 ```
 
-### Отбор по регистрам
-Например, получаем остатки по складу:
+### Отбор по регистрам (виртуальным таблицам)
+Доступные методы:
+* balance(null|array $conditions)
+* turnovers(null|array $conditions)
+* balanceAndTurnovers(null|array $conditions)
+
+Например, получаем остатки и обороты по складу:
 ```php
-$storeRemains = $oDataClient->from("AccountingRegister_Хозрасчетный/Balance(AccountCondition='Account/Code eq '43' or Account/Code eq '41.01'')")
+$storeRemains = $oDataClient->from('AccountingRegister_Хозрасчетный')
+    ->balanceAndTurnovers([
+            'AccountCondition' => "Account/Code eq '43' or Account/Code eq '41.01'", // пока что красивая группировка не реализована, 
+                                                                                     // соответственно операторы должны соответствовать стандартку ODate, 
+                                                                                     // кавычки всегда одинарные!
+            'EndPeriod' => new \DateTime('2019-05-01'), // Автоматически приводит к дате
+            'StartPeriod' => new \DateTime('2019-04-01'),
+        ])
     ->select([
         'Account/Code',
         'Account/Description',
@@ -70,7 +124,7 @@ $storeRemains = $oDataClient->from("AccountingRegister_Хозрасчетный/
 var_export($storeRemains);
 ```
 
-### Комбинированный отбор
+### Отбор по нескольким условиям
 ```php
 $measures = $oDataClient->from('Catalog_КлассификаторЕдиницИзмерения')
     ->where([
@@ -85,6 +139,46 @@ $measures = $oDataClient->from('Catalog_КлассификаторЕдиницИ
 foreach ($measures as $rec) {
     print ($rec->НаименованиеПолное) . "\n";
 }
+```
+
+### Пометка на удаление
+Объект удаляется не полностью, а помечается на удаление:
+```php
+$oDataClient->from('Catalog_КлассификаторЕдиницИзмерения')
+            ->delete('ac886490-9a42-11e8-9429-a8a795c008e0');
+```
+Массовое удаление в 1С недоступно.
+
+### Создание объекта
+```php
+$result = $oDataClient->from('Catalog_КлассификаторЕдиницИзмерения')
+            ->create([
+                'Code' => 777,
+                'Description' => '777 ед',
+                'НаименованиеПолное' => 'Единица 777',
+            ]); 
+print_r($result); // содержит полную информацию об объекте
+```
+
+### Изменение объекта
+```php
+$result = $oDataClient->from('Catalog_КлассификаторЕдиницИзмерения')
+            ->update('ac886490-9a42-11e8-9429-a8a795c008e0', [
+                'Code' => 778,
+            ]); 
+print_r($result); // содержит полную информацию об объекте
+```
+Массовое изменение в 1С недоступно.
+
+### Проведение и отменая проведения
+```php
+// проведение
+$oDataClient->from('Document_ОприходованиеТоваров')
+            ->postDocument('f8c00f9e-7887-11e9-80c8-00155d58132c');
+            
+// отмена проведения
+$oDataClient->from('Document_ОприходованиеТоваров')
+            ->unPostDocument('f8c00f9e-7887-11e9-80c8-00155d58132c');
 ```
 
 ## Базовая информация по 1С
